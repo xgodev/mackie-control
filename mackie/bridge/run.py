@@ -42,6 +42,16 @@ def _present(hints, names) -> str | None:
         return None
 
 
+def _ports(list_names) -> list[str] | None:
+    """The port names CoreMIDI shows now, or None when listing them fails.
+    A port can vanish between rtmidi counting the ports and naming them, which
+    raises InvalidPortError; on 2026-10-21 that one call killed the bridge."""
+    try:
+        return list_names()
+    except Exception:
+        return None
+
+
 def run(profile_path: str, port: str | None = None, log=print,
         midi=mido, sleep=time.sleep, watch: float = WATCH) -> None:
     profile = expand(load_profile(profile_path))
@@ -63,7 +73,7 @@ def run(profile_path: str, port: str | None = None, log=print,
             src = _wait_for_surface(hints, midi, log, sleep, first)
             if src is None:
                 continue
-            dst = _present(hints, midi.get_output_names()) or src
+            dst = _present(hints, _ports(midi.get_output_names) or []) or src
             inp, out = midi.open_input(src), midi.open_output(dst)
             live["out"] = out
             if first:
@@ -84,7 +94,7 @@ def run(profile_path: str, port: str | None = None, log=print,
 
 
 def _wait_for_surface(hints, midi, log, sleep, first):
-    src = _present(hints, midi.get_input_names())
+    src = _present(hints, _ports(midi.get_input_names) or [])
     if src is None:
         if first:
             log(f"waiting for a MIDI port matching {list(hints)}")
@@ -109,5 +119,6 @@ def _read_until_gone(bridge, inp, hints, midi, sleep, watch):
         since += POLL
         if since >= watch:
             since = 0.0
-            if _present(hints, midi.get_input_names()) is None:
+            names = _ports(midi.get_input_names)
+            if names is not None and _present(hints, names) is None:
                 return

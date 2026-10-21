@@ -64,6 +64,8 @@ class FakeMidi:
         self.names = self.timeline.pop(0)
 
     def get_input_names(self):
+        if isinstance(self.names, Exception):
+            raise self.names
         return list(self.names)
 
     get_output_names = get_input_names
@@ -151,3 +153,15 @@ def test_a_message_that_raises_is_logged_and_the_bridge_keeps_reading(monkeypatc
         run.run("ignored.yaml", midi=midi, log=lines.append, watch=0,
                 sleep=lambda s: midi.tick())
     assert any("boom" in l for l in lines)
+
+
+def test_a_port_list_that_raises_does_not_end_the_bridge(monkeypatch):
+    """rtmidi raises InvalidPortError when a port vanishes while it is listing
+    them; on 2026-10-21 that killed the bridge."""
+    monkeypatch.setattr(run, "load_profile", lambda p: _profile())
+    midi = FakeMidi([ON, ON, RuntimeError("portNumber (3) is invalid"), ON, ON])
+    lines = []
+    with pytest.raises(KeyboardInterrupt):
+        run.run("ignored.yaml", midi=midi, log=lines.append, watch=0,
+                sleep=lambda s: midi.tick())
+    assert not any("gone" in l for l in lines)
