@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 quantum-hd8.workspace = true
+pedal-core.workspace = true
 mvave-mk300.workspace = true
 hotone-ampero2.workspace = true
 midir.workspace = true
