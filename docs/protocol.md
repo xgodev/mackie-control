@@ -1,6 +1,6 @@
 # Mackie Control, as this repo uses it
 
-Plain MIDI, no SysEx. `mackie/protocol.py` decodes messages into `Fader`,
+Plain MIDI, no SysEx. `crates/mackie-control/src/protocol.rs` decodes messages into `Fader`,
 `Encoder` and `Button`, and builds the two messages that go back to the surface.
 
 ## Surface → host

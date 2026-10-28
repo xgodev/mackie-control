@@ -8,7 +8,7 @@ FRFR and SYN 5050 are for the analog scenes (mixer on), where they work (João,
 
 ## The `openrig` driver (2026-09-30)
 
-`mackie/bridge/drivers/openrig.py`. A fader drives one strip of OpenRig's
+`crates/mackie-control/src/drivers/openrig.rs`. A fader drives one strip of OpenRig's
 global mixer (`openrig://mixer`), i.e. the level OpenRig sends to that output.
 
 - Target: strip id, full name, or a unique name prefix (`FRFR`, `SYN-5050`).

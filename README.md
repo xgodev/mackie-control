@@ -17,40 +17,22 @@ computer has to translate.
 ## Install
 
 ```bash
-pip install git+https://github.com/xgodev/mackie-control
-pip install 'mackie-control[hd8] @ git+https://github.com/xgodev/mackie-control'   # with the HD 8 driver
-pip install 'mackie-control[mk300,ampero2] @ git+https://github.com/xgodev/mackie-control'   # the pedals
+cargo install --locked --git https://github.com/xgodev/mackie-control mackie-control
 ```
 
-### Reinstalling, after a fix
-
-`pip install -U git+...` compares **version strings, not commits**: it clones
-the new commit, sees the same version already installed and installs nothing —
-silently leaving the old code in place. On 2026-09-22 two fixes were pushed,
-installed this way, and neither reached the machine that had the bug.
-
-So either bump `version` in `pyproject.toml` with the fix, or reinstall by
-force. The whole chain, from a fix to a working rig:
+The binary is `mackie`, in `~/.cargo/bin`. Cargo reinstalls from the latest
+commit, so after a fix the same command plus a restart is the whole chain:
 
 ```bash
-pip install --force-reinstall --no-deps git+https://github.com/xgodev/mackie-control
-pip install --force-reinstall --no-deps git+https://github.com/jpfaria/quantum-hd8   # the HD 8 driver's library
-pkill -f "mackie bridge"                                                             # the old code is still running
-mackie bridge ~/Projetos/github.com/jpfaria/music-setup/settings/smc-mixer.yaml
-```
-
-Check which code is actually loaded, not which commit pip cloned:
-
-```bash
-python3 -c "import mackie, mackie.bridge.run as r; print(mackie.__file__)"
-pip show mackie-control | grep -i version
+cargo install --locked --force --git https://github.com/xgodev/mackie-control mackie-control
+mackie service restart
 ```
 
 ## Use
 
 ```bash
 mackie ports                         # MIDI ports visible right now
-mackie surfaces                      # surfaces this package knows
+mackie surfaces                      # surfaces this program knows
 mackie watch 30                      # print what the surface sends, decoded
 mackie devices my-rig.yaml           # the devices and the scenes each can load
 mackie bridge my-rig.yaml            # run the bridge
@@ -143,7 +125,7 @@ The skill must stay under `skills/`, which is where the plugin looks for it.
 ## Tests
 
 ```bash
-python3 -m pytest -q
+cargo test --workspace
 ```
 
-139 tests, no hardware: drivers and surfaces go in by injection.
+No hardware: drivers and surfaces go in by injection.

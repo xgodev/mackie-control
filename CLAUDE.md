@@ -2,9 +2,10 @@
 
 ## Every change is committed AND pushed
 Any change here ends with `git commit` + `git push` to `origin/main` in the same
-turn. João installs this with `pip install git+https://github.com/xgodev/mackie-control`;
+turn. João installs this with `cargo install --git https://github.com/xgodev/mackie-control`;
 an unpushed commit does not exist for him or for his other sessions. Run
-`python3 -m pytest -q` and check the exit code before committing.
+`cargo test --workspace` and `cargo clippy --workspace --all-targets -- -D warnings`
+and check the exit codes before committing.
 
 ## What this repo is — and is not
 It is the **surface** (Mackie) and the **bridge**. It is not a repo about one
@@ -28,11 +29,11 @@ the rest of the operation continues. On 2026-09-21 one refused write
 broken state and the button unable to undo it.
 
 ## Tests run without hardware, and without the real home
-Drivers and clients go in by injection (`HD8(client=...)`), and the profile is
+Drivers and clients go in by injection (`Hd8::with(client, ...)`), and the profile is
 data. No test in this repo may require a device to be plugged in.
-Nor may a test write outside `tmp_path`: `tests/conftest.py` points
-`XDG_STATE_HOME` at a temp dir for every test, because on 2026-09-22 a test
-written before that fixture left `~/.local/state/mackie-control/ignored.json`
+Nor may a test write outside a temp dir: tests that reach the state file point
+`XDG_STATE_HOME` at a `tempfile` dir first, because on 2026-09-22 a test
+written without that left `~/.local/state/mackie-control/ignored.json`
 in João's home.
 
 ## Nothing slow on the MIDI thread
@@ -87,7 +88,9 @@ read them before making a claim about his rig, not after.
 The bridge runs as a LaunchAgent (`mackie service install PROFILE`), not in a
 terminal. A pushed change is not live until it is installed and the service
 restarted, so every push here is followed by:
-`~/.pyenv/versions/3.12.3/bin/pip install -q --force-reinstall --no-deps git+https://github.com/xgodev/mackie-control && ~/.pyenv/versions/3.12.3/bin/mackie service restart`,
-then `mackie service status` and a look at `~/Library/Logs/mackie-control.log`.
+`CARGO_TARGET_DIR="/Volumes/MACBOOK EXTERNO/workspaces/.cache/cargo-target-mackie" cargo install -q --locked --force --path crates/mackie-control && ~/.cargo/bin/mackie service restart`,
+then `~/.cargo/bin/mackie service status` and a look at `~/Library/Logs/mackie-control.log`.
+The LaunchAgent runs `~/.cargo/bin/mackie` (the Python version was retired on
+2026-10-27).
 (2026-09-23: "qdo a gente alterar alguma coisa aqui, vc precisa atualizar a
 app na minha maquina e reiniciar o servico".)

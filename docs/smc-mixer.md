@@ -2,7 +2,7 @@
 
 Control surface, not a pedal: 8 faders, 8 endless encoders, 43 buttons, USB-C
 and BLE, 780 mAh battery. It does **not** speak M-EFCS — in DAW mode it speaks
-**Mackie Control**, which is `mackie/protocol.py`.
+**Mackie Control**, which is `crates/mackie-control/src/protocol.rs`.
 
 Everything below was measured on 2026-09-21 with the device on Bluetooth.
 
