@@ -2,7 +2,7 @@
 
 ## Every change is committed AND pushed
 Any change here ends with `git commit` + `git push` to `origin/main` in the same
-turn. João installs this with `pip install git+https://github.com/jpfaria/mackie-control`;
+turn. João installs this with `pip install git+https://github.com/xgodev/mackie-control`;
 an unpushed commit does not exist for him or for his other sessions. Run
 `python3 -m pytest -q` and check the exit code before committing.
 
@@ -87,7 +87,7 @@ read them before making a claim about his rig, not after.
 The bridge runs as a LaunchAgent (`mackie service install PROFILE`), not in a
 terminal. A pushed change is not live until it is installed and the service
 restarted, so every push here is followed by:
-`~/.pyenv/versions/3.12.3/bin/pip install -q --force-reinstall --no-deps git+https://github.com/jpfaria/mackie-control && ~/.pyenv/versions/3.12.3/bin/mackie service restart`,
+`~/.pyenv/versions/3.12.3/bin/pip install -q --force-reinstall --no-deps git+https://github.com/xgodev/mackie-control && ~/.pyenv/versions/3.12.3/bin/mackie service restart`,
 then `mackie service status` and a look at `~/Library/Logs/mackie-control.log`.
 (2026-09-23: "qdo a gente alterar alguma coisa aqui, vc precisa atualizar a
 app na minha maquina e reiniciar o servico".)

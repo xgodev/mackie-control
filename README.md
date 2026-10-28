@@ -17,9 +17,9 @@ computer has to translate.
 ## Install
 
 ```bash
-pip install git+https://github.com/jpfaria/mackie-control
-pip install 'mackie-control[hd8] @ git+https://github.com/jpfaria/mackie-control'   # with the HD 8 driver
-pip install 'mackie-control[mk300,ampero2] @ git+https://github.com/jpfaria/mackie-control'   # the pedals
+pip install git+https://github.com/xgodev/mackie-control
+pip install 'mackie-control[hd8] @ git+https://github.com/xgodev/mackie-control'   # with the HD 8 driver
+pip install 'mackie-control[mk300,ampero2] @ git+https://github.com/xgodev/mackie-control'   # the pedals
 ```
 
 ### Reinstalling, after a fix
@@ -33,7 +33,7 @@ So either bump `version` in `pyproject.toml` with the fix, or reinstall by
 force. The whole chain, from a fix to a working rig:
 
 ```bash
-pip install --force-reinstall --no-deps git+https://github.com/jpfaria/mackie-control
+pip install --force-reinstall --no-deps git+https://github.com/xgodev/mackie-control
 pip install --force-reinstall --no-deps git+https://github.com/jpfaria/quantum-hd8   # the HD 8 driver's library
 pkill -f "mackie bridge"                                                             # the old code is still running
 mackie bridge ~/Projetos/github.com/jpfaria/music-setup/settings/smc-mixer.yaml
@@ -119,7 +119,7 @@ touch, and how to prove it does anything. That is packaged as a Claude Code
 plugin, so it works without cloning this repo:
 
 ```
-/plugin marketplace add jpfaria/mackie-control
+/plugin marketplace add xgodev/mackie-control
 /plugin install mackie-control@mackie-control
 ```
 

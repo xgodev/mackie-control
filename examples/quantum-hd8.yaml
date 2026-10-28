@@ -1,6 +1,6 @@
 # A full desk on a PreSonus Quantum HD 8, plus a second bank for the computer.
 #
-#   pip install 'mackie-control[hd8] @ git+https://github.com/jpfaria/mackie-control'
+#   pip install 'mackie-control[hd8] @ git+https://github.com/xgodev/mackie-control'
 #   mackie bridge examples/quantum-hd8.yaml
 #
 # Paths come from `quantum-hd8 dump` on YOUR interface -- channel numbers differ

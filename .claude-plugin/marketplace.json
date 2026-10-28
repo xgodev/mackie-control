@@ -10,7 +10,7 @@
       "name": "mackie-control",
       "source": {
         "source": "github",
-        "repo": "jpfaria/mackie-control"
+        "repo": "xgodev/mackie-control"
       },
       "description": "Put a piece of gear on a Mackie control surface: write the rig profile, choose what each fader and scene button touches, add a driver."
     }
