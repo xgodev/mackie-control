@@ -1,0 +1,27 @@
+[package]
+name = "mackie-control"
+description = "A Mackie Control surface (SMC-Mixer) driving audio gear through a YAML profile"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "mackie"
+path = "src/main.rs"
+
+[dependencies]
+quantum-hd8.workspace = true
+mvave-mk300.workspace = true
+hotone-ampero2.workspace = true
+midir.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+ureq.workspace = true
+plist.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

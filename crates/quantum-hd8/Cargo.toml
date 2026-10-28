@@ -1,0 +1,15 @@
+[package]
+name = "quantum-hd8"
+description = "PreSonus Quantum HD 8 over UCNet: the ucdaemon client the mackie bridge drives"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+flate2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

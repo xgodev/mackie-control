@@ -1,0 +1,3 @@
+# pedal-drivers is a private repo: let cargo fetch it with the system git and its SSH agent.
+[net]
+git-fetch-with-cli = true
