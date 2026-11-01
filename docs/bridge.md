@@ -307,3 +307,28 @@ mackie bridge examples/minimal.yaml
 
 Everything in these docs was measured on hardware, with the date. When a
 measurement contradicts a manual, the measurement wins and the doc says so.
+
+## One AppleScript process, not one per script
+
+The transport lamps ask an app "is it playing?" once a second. Through one
+`osascript` per script that was ~54 processes a minute, and each one spends a
+LaunchServices serial: on 2026-10-31, after 21 days of uptime, the 32-bit
+counter ran out and every program macOS opened stayed stuck at launch, without
+events, until a reboot (xgodev/ghost-mouse#4).
+
+The `mac` and `app` drivers now share the shape of `ScriptHost`: one
+`osascript -l JavaScript` per driver, started at its first script, that runs
+each script in-process through `NSAppleScript` and leaves on end of stdin, so it
+does not outlive the bridge. A host that dies is replaced at most once every
+10 s, so a host that cannot stay up does not become a process per call.
+
+Measured 2026-11-01, same profile, 65 s, no surface attached, `osascript`
+behind a shim that logs each start:
+
+| | `osascript` starts | check-ins |
+|---|---|---|
+| one per script | 55 | one each |
+| `ScriptHost` | 1 | 1 |
+
+A script costs ~1 ms against ~117 ms. The host's memory settles at ~40 MB
+(24 MB at the start, flat from 12 000 to 30 000 scripts).

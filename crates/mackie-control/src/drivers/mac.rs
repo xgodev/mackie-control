@@ -1,19 +1,168 @@
 //! macOS volume: the system output, and one application's own volume.
 
-use std::process::Command;
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+use serde::Deserialize;
 
 use super::{unsupported, Driver, Result, Unsupported};
 
 /// Runs one AppleScript and answers its trimmed output, or why it failed.
 pub type Osascript = Box<dyn Fn(&str) -> std::result::Result<String, String> + Send>;
 
-pub fn osascript(script: &str) -> std::result::Result<String, String> {
-    let out = Command::new("osascript").args(["-e", script]).output().map_err(|e| e.to_string())?;
-    if !out.status.success() {
-        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
-        return Err(if err.is_empty() { format!("osascript exited with {}", out.status) } else { err });
+/// Runs each line of stdin, a JSON string of AppleScript source, and writes one line of JSON back. It leaves
+/// on end of input, so it does not outlive the bridge.
+const HOST: &str = r#"
+ObjC.import("Foundation");
+function answer(source) {
+  const error = $.NSMutableDictionary.alloc.init;
+  const out = $.NSAppleScript.alloc.initWithSource($(source)).executeAndReturnError(error);
+  if (out.isNil()) {
+    return { err: ObjC.unwrap(error.objectForKey("NSAppleScriptErrorMessage")) || "AppleScript failed" };
+  }
+  const text = ObjC.unwrap(out.stringValue);
+  return { ok: text === undefined ? "missing value" : text };
+}
+function run() {
+  const input = $.NSFileHandle.fileHandleWithStandardInput;
+  const output = $.NSFileHandle.fileHandleWithStandardOutput;
+  let pending = "";
+  for (;;) {
+    const data = input.availableData;
+    if (Number(data.length) === 0) return;
+    pending += ObjC.unwrap($.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding));
+    let nl;
+    while ((nl = pending.indexOf("\n")) >= 0) {
+      const line = pending.slice(0, nl);
+      pending = pending.slice(nl + 1);
+      const reply = $(JSON.stringify(answer(JSON.parse(line))) + "\n");
+      output.writeData(reply.dataUsingEncoding($.NSUTF8StringEncoding));
     }
-    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+  }
+}
+"#;
+
+/// s before starting another host after one died: a host that cannot stay up must not become the process per
+/// call this type exists to avoid.
+const RESPAWN_AFTER: Duration = Duration::from_secs(10);
+
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Reply {
+    Ok(String),
+    Err(String),
+}
+
+struct Running {
+    child: Child,
+    stdin: ChildStdin,
+    stdout: BufReader<ChildStdout>,
+}
+
+impl Running {
+    fn ask(&mut self, script: &str) -> std::result::Result<Reply, String> {
+        let line = serde_json::to_string(script).map_err(|e| e.to_string())?;
+        writeln!(self.stdin, "{line}").map_err(|e| e.to_string())?;
+        let mut reply = String::new();
+        let read = self.stdout.read_line(&mut reply).map_err(|e| e.to_string())?;
+        if read == 0 {
+            return Err("the AppleScript host left".to_string());
+        }
+        serde_json::from_str(&reply).map_err(|e| format!("the AppleScript host said {reply:?}: {e}"))
+    }
+}
+
+impl Drop for Running {
+    fn drop(&mut self) {
+        // intentional: it may have left already, and either way there is nobody left to tell.
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+#[derive(Default)]
+struct HostState {
+    running: Option<Running>,
+    not_before: Option<Instant>,
+}
+
+/// One long-lived process running every script of a driver.
+///
+/// A new `osascript` per script spends one LaunchServices serial each, and the transport lamps ask once a
+/// second: the 32-bit counter ran out after 21 days and every new program on the Mac stuck at launch until a
+/// reboot (2026-11-01, docs/bridge.md). One script costs about 1 ms here against 117 ms in a process of its own.
+pub struct ScriptHost {
+    command: Box<dyn Fn() -> Command + Send>,
+    respawn_after: Duration,
+    state: Mutex<HostState>,
+}
+
+impl ScriptHost {
+    pub fn new() -> Self {
+        Self::with(
+            Box::new(|| {
+                let mut c = Command::new("osascript");
+                c.args(["-l", "JavaScript", "-e", HOST]);
+                c
+            }),
+            RESPAWN_AFTER,
+        )
+    }
+
+    pub fn with(command: Box<dyn Fn() -> Command + Send>, respawn_after: Duration) -> Self {
+        ScriptHost { command, respawn_after, state: Mutex::new(HostState::default()) }
+    }
+
+    fn start(&self) -> std::result::Result<Running, String> {
+        let mut child = (self.command)()
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        let stdin = child.stdin.take().ok_or("the AppleScript host has no stdin")?;
+        let stdout = child.stdout.take().ok_or("the AppleScript host has no stdout")?;
+        Ok(Running { child, stdin, stdout: BufReader::new(stdout) })
+    }
+
+    pub fn run(&self, script: &str) -> std::result::Result<String, String> {
+        let mut state = self.state.lock().unwrap();
+        if state.running.is_none() {
+            if state.not_before.is_some_and(|t| Instant::now() < t) {
+                return Err("the AppleScript host is down".to_string());
+            }
+            match self.start() {
+                Ok(running) => state.running = Some(running),
+                Err(e) => {
+                    state.not_before = Some(Instant::now() + self.respawn_after);
+                    return Err(e);
+                }
+            }
+        }
+        match state.running.as_mut().map(|r| r.ask(script)) {
+            Some(Ok(Reply::Ok(text))) => Ok(text.trim().to_string()),
+            Some(Ok(Reply::Err(e))) => Err(e),
+            Some(Err(e)) => {
+                state.running = None;
+                state.not_before = Some(Instant::now() + self.respawn_after);
+                Err(e)
+            }
+            None => Err("the AppleScript host is down".to_string()),
+        }
+    }
+}
+
+impl Default for ScriptHost {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn script_host() -> Osascript {
+    let host = ScriptHost::new();
+    Box::new(move |script| host.run(script))
 }
 
 const NO_SYSTEM_VOLUME: &str =
@@ -30,7 +179,7 @@ pub struct MacVolume {
 
 impl MacVolume {
     pub fn new() -> Self {
-        Self::with(Box::new(osascript))
+        Self::with(script_host())
     }
 
     pub fn with(run: Osascript) -> Self {
@@ -85,7 +234,7 @@ pub struct AppVolume {
 
 impl AppVolume {
     pub fn new() -> Self {
-        Self::with(Box::new(osascript))
+        Self::with(script_host())
     }
 
     pub fn with(run: Osascript) -> Self {
