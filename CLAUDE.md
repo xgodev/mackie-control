@@ -92,5 +92,10 @@ restarted, so every push here is followed by:
 then `~/.cargo/bin/mackie service status` and a look at `~/Library/Logs/mackie-control.log`.
 The LaunchAgent runs `~/.cargo/bin/mackie` (the Python version was retired on
 2026-10-27).
+**A clean `cargo install` is not proof.** On 2026-11-01 it exited 0, registered
+the new commit, and copied a stale binary from that target dir, so the service
+restarted on old code. Check the date of `~/.cargo/bin/mackie` and the running
+behaviour; if the date did not move, `cargo clean --release -p mackie-control`
+in that target dir and install again.
 (2026-09-23: "qdo a gente alterar alguma coisa aqui, vc precisa atualizar a
 app na minha maquina e reiniciar o servico".)
