@@ -403,9 +403,13 @@ impl Client {
     fn handle(&mut self, m: &Message) -> Option<&'static str> {
         match m.code.as_str() {
             "ZM" | "ZB" => {
-                // A wrong session answers junk: it must not count as state.
-                let tree = ucnet::parse_state(m)?;
-                self.state = flatten(&tree);
+                // A wrong session answers junk or a tree with no parameter (measured 2026-11-01): neither
+                // counts as state.
+                let state = flatten(&ucnet::parse_state(m)?);
+                if state.is_empty() {
+                    return None;
+                }
+                self.state = state;
                 Some("state")
             }
             "FD" => {

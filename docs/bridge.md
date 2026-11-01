@@ -53,6 +53,11 @@ Measured 2026-09-23, after the Mac was moved and the mixer reconnected:
   not without João's go-ahead.
 - The bridge's own connection can go stale while one-off connections write
   fine: `mackie service restart` fixes it.
+- A wrong session byte can answer too. Measured 2026-11-01: sessions 101 and 103
+  answered a tree with 0 parameters, 102 answered 1419. Discovery took 103
+  because it is nearer the last known byte, cached it, and every write went
+  unconfirmed across restarts and a reboot. An empty tree no longer counts as
+  the device.
 
 ### What the HD 8 accepts, per channel
 

@@ -323,6 +323,36 @@ fn nothing_answers_is_not_responding_and_keeps_the_defaults() {
     assert_eq!((c.port, c.device_cb), (59791, [0x6a, 0, 0x69, 0]));
 }
 
+/// A session byte the daemon answers with a tree that holds no parameter.
+struct EmptySession;
+
+impl Conn for EmptySession {
+    fn send(&self, _: &[u8]) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn recv(&self, _: Duration) -> io::Result<Recv> {
+        use std::io::Write;
+        let mut z = flate2::write::ZlibEncoder::new(vec![0u8; 4], flate2::Compression::default());
+        z.write_all(b"{\"id\": \"Synchronize\", \"children\": {}}").unwrap();
+        Ok(Recv::Data(ucnet::encode("ZM", &z.finish().unwrap(), DEVICE_REPLY_CB)))
+    }
+}
+
+#[test]
+fn a_session_answering_an_empty_tree_is_not_the_device() {
+    // Measured 2026-11-01: sessions 101 and 103 answered 0 parameters, 102 answered 1419. Discovery stopped at
+    // 103, nearer the last known byte, and every write after that went unconfirmed.
+    let mut c = Client::with(
+        Box::new(|_, _, _| Ok(Arc::new(EmptySession) as Arc<dyn Conn>)),
+        false,
+        Box::new(Vec::new),
+        None,
+    );
+    c.connect_timeout = Duration::from_millis(50);
+    assert!(matches!(c.connect(), Err(Error::NotResponding)));
+}
+
 #[test]
 fn connect_finds_a_session_far_from_the_default() {
     // Measured 21/10: UC reopened, daemon on 49153, HD 8 session 0x7c.
