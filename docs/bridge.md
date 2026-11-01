@@ -58,6 +58,12 @@ Measured 2026-09-23, after the Mac was moved and the mixer reconnected:
   because it is nearer the last known byte, cached it, and every write went
   unconfirmed across restarts and a reboot. An empty tree no longer counts as
   the device.
+- Bypass reads like a dead session. Measured 2026-11-01: `aux/ch2/volume` and
+  `aux/ch10/volume` logged "did not confirm" with `global/mixerMode = 0`, while
+  a fresh connection on the same session got `global/ledBrightness` echoed in
+  18 ms and the tree still listed the aux values. Read `global/mixerMode` before
+  blaming the session. (`netstat -anv` columns 7 and 8 are lifetime rx/tx bytes,
+  not queues: they do not show a daemon falling behind.)
 
 ### What the HD 8 accepts, per channel
 
