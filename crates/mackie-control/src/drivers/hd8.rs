@@ -12,8 +12,12 @@
 //! 2026-09-27). An unconfirmed write is therefore also retried on a new connection -- but at most once
 //! every STALE_RETRY seconds, because the mixer also leaves genuinely refused writes unconfirmed (an aux bus
 //! in Mixer Bypass) and a fader sends dozens a second.
+//!
+//! Each unconfirmed write also waits a full second for its echo, and the bridge applies writes one after
+//! another, so a fader on a refused bus froze every other fader while it moved (2026-11-02). A path whose
+//! write came back unconfirmed is therefore refused without being sent until STALE_RETRY has passed.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Instant;
 
 use quantum_hd8::Error;
@@ -69,6 +73,8 @@ pub struct Hd8 {
     clock: Box<dyn Fn() -> f64 + Send>,
     /// When the last stale reconnect happened.
     stale_at: Option<f64>,
+    /// When each path last came back unconfirmed.
+    refused: HashMap<String, f64>,
 }
 
 impl Hd8 {
@@ -80,13 +86,14 @@ impl Hd8 {
             connect: Some(Box::new(connect_real)),
             clock: Box::new(move || start.elapsed().as_secs_f64()),
             stale_at: None,
+            refused: HashMap::new(),
         }
     }
 
     /// A client, a way to build a fresh one (None: it cannot be reconnected, and the driver then refuses
     /// instead of crashing), and a clock in seconds.
     pub fn with(cli: Box<dyn Client>, connect: Option<Connect>, clock: Box<dyn Fn() -> f64 + Send>) -> Self {
-        Hd8 { cli: Some(cli), connect, clock, stale_at: None }
+        Hd8 { cli: Some(cli), connect, clock, stale_at: None, refused: HashMap::new() }
     }
 
     fn client(&mut self) -> Result<&mut Box<dyn Client>> {
@@ -148,7 +155,22 @@ impl Driver for Hd8 {
 
     fn write(&mut self, target: &str, value: f64) -> Result<()> {
         let v = value.clamp(0.0, 1.0);
-        self.retry(|c| c.set_raw(target, v))
+        let now = (self.clock)();
+        if self.refused.get(target).is_some_and(|at| now - at < STALE_RETRY) {
+            return unsupported(format!("hd8: {target}: refused, not confirmed a moment ago"));
+        }
+        let mut unconfirmed = false;
+        let result = self.retry(|c| {
+            let r = c.set_raw(target, v);
+            unconfirmed = matches!(r, Err(Error::WriteNotConfirmed(_)));
+            r
+        });
+        if unconfirmed {
+            self.refused.insert(target.into(), now);
+        } else if result.is_ok() {
+            self.refused.remove(target);
+        }
+        result
     }
 
     fn toggle(&mut self, target: &str) -> Result<bool> {

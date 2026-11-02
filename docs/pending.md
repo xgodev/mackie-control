@@ -32,8 +32,8 @@ heard it.
 - **The HD 8 OUT default leaves out ADAT 11/12** (`aux/ch10`): it takes
   `aux/ch5`-`ch9` (ADAT 1/2 to 9/10), eight faders in all, and in João's rig
   ADAT 11/12 is the FRFR. Offered twice (swap 1/2 for 11/12), no answer yet.
-- **A destination that never confirms is retried on every move.**
-  `line/ch19/trim` logged "the daemon did not confirm the write" ten times per
-  fader move. Proposed: after three failures in a row mark it refused, say so
-  once, and try again on bank change, scene load or reconnect. João said
-  "ambos" (this plus the profile fix); only the profile was done.
+- **A destination that never confirms is retried on every move.** Partly done
+  (2026-11-02): each unconfirmed write blocked the drain 1 s, so a fader on an
+  aux bus in Mixer Bypass froze every other fader. The hd8 driver now refuses
+  that path without sending it for `STALE_RETRY` seconds. Still open: say so
+  once in the log instead of on every move.

@@ -36,6 +36,8 @@ struct Ucd {
     values: HashMap<String, f64>,
     loaded: Option<(String, bool)>,
     closed: bool,
+    /// Writes sent to the daemon; each unconfirmed one costs the bridge a full second.
+    sent: usize,
 }
 
 #[derive(Clone)]
@@ -62,6 +64,7 @@ impl Client for FakeClient {
     }
 
     fn set_raw(&mut self, path: &str, value: f64) -> Result<(), Error> {
+        self.ucd.lock().unwrap().sent += 1;
         match self.writes {
             Writes::Land => {
                 self.ucd.lock().unwrap().values.insert(path.into(), value);
@@ -211,6 +214,28 @@ fn hd8_does_not_reconnect_again_and_again_for_a_refused_write() {
     *now.lock().unwrap() += hd8::STALE_RETRY + 1.0;
     assert!(d.write("aux/ch10/volume", 0.5).is_err());
     assert_eq!(*tries.lock().unwrap(), 2);
+}
+
+#[test]
+fn hd8_does_not_wait_on_a_write_it_already_knows_is_refused() {
+    // Each unconfirmed write blocks the drain for a second, so a fader on a refused aux bus froze every
+    // other fader while it moved (2026-11-02). Once a path is refused, it is not sent again until
+    // STALE_RETRY has passed.
+    let fake = FakeClient::new(Writes::Stale);
+    let again = fake.clone();
+    let connect: hd8::Connect = Box::new(move || Ok(Box::new(again.clone()) as Box<dyn Client>));
+    let now = Arc::new(Mutex::new(100.0));
+    let n = now.clone();
+    let mut d = Hd8::with(Box::new(fake.clone()), Some(connect), Box::new(move || *n.lock().unwrap()));
+    assert!(d.write("aux/ch2/volume", 0.5).is_err());
+    let sent = fake.ucd.lock().unwrap().sent;
+    for _ in 0..5 {
+        assert!(d.write("aux/ch2/volume", 0.5).is_err());
+    }
+    assert_eq!(fake.ucd.lock().unwrap().sent, sent);
+    *now.lock().unwrap() += hd8::STALE_RETRY + 1.0;
+    assert!(d.write("aux/ch2/volume", 0.5).is_err());
+    assert!(fake.ucd.lock().unwrap().sent > sent);
 }
 
 #[test]
