@@ -9,7 +9,7 @@ FRFR and SYN 5050 are for the analog scenes (mixer on), where they work (João,
 ## The `openrig` driver (2026-09-30)
 
 `crates/mackie-control/src/drivers/openrig.rs`. A fader drives one strip of OpenRig's
-global mixer (`openrig://mixer`), i.e. the level OpenRig sends to that output.
+global mixer (`jovee://mixer`), i.e. the level OpenRig sends to that output.
 
 - Target: strip id, full name, or a unique name prefix (`FRFR`, `SYN-5050`).
   An ambiguous prefix (`SYN-2` matches four strips) is refused.
@@ -43,3 +43,8 @@ profile only writes `- {driver: openrig}`.
 **2026-10-01:** OpenRig is one device, not two banks. OUT and IN are its
 scenes (`scenes()` / `load_scene()`), paged with the arrows like any other
 device's; the bank carries `live: mixer` and the faders follow the scene.
+
+**2026-11-02:** OpenRig is now JoVee Studio and its MCP resources moved from
+`openrig://` to `jovee://` (same port, same strip shape, same tools). The bridge
+kept asking `openrig://mixer`, got "unknown resource", and the bank came up
+with no faders.

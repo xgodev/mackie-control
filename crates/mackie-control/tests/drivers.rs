@@ -522,7 +522,8 @@ impl Mcp for FakeMcp {
     }
 
     fn resource(&mut self, uri: &str) -> Result<Value, McpError> {
-        assert_eq!(uri, "openrig://mixer");
+        // OpenRig became JoVee Studio and its resources moved to jovee:// (measured 2026-11-02).
+        assert_eq!(uri, "jovee://mixer");
         let r = self.rig();
         match r.server {
             Server::Down => Err(McpError::Down("connection refused".into())),

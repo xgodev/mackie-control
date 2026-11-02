@@ -10,10 +10,10 @@
 //! holding the JSON-RPC response.
 //!
 //! The strips change with every project and chain opened, so the driver's bank is live: its two scenes,
-//! OUT and IN, take their faders from `openrig://mixer` while the bridge runs, in the order OpenRig lists
+//! OUT and IN, take their faders from `jovee://mixer` while the bridge runs, in the order OpenRig lists
 //! them, and address each strip by its id. Nothing about them is written in a profile.
 //!
-//! Targets name a strip the way `openrig://mixer` lists it: the full id (`out:24,25@coreaudio:...`), the
+//! Targets name a strip the way `jovee://mixer` lists it: the full id (`out:24,25@coreaudio:...`), the
 //! full name, or the start of the name ("FRFR" matches "FRFR (ADAT out 11/12)"). A name that matches more
 //! than one strip is refused rather than guessed. `mute:FRFR` is that strip's mute: it reads 1.0 / 0.0 and
 //! toggles, which is how the bridge asks for a mute lamp.
@@ -212,7 +212,7 @@ impl Default for OpenRig {
 }
 
 fn strips(c: &mut dyn Mcp) -> Op<Vec<Value>> {
-    let mixer = c.resource("openrig://mixer")?;
+    let mixer = c.resource("jovee://mixer")?;
     Ok(mixer.get("strips").and_then(Value::as_array).cloned().unwrap_or_default())
 }
 
