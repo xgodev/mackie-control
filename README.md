@@ -1,3 +1,5 @@
+> **Moved.** This code now lives in the JoVee monorepo, [xgodev/jovee-studio](https://github.com/xgodev/jovee-studio), under `crates/mackie-control`. This repository is archived and read-only.
+
 # mackie-control
 
 A **Mackie Control surface** — faders, encoders and buttons — driving gear that
