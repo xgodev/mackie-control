@@ -99,3 +99,9 @@ behaviour; if the date did not move, `cargo clean --release -p mackie-control`
 in that target dir and install again.
 (2026-09-23: "qdo a gente alterar alguma coisa aqui, vc precisa atualizar a
 app na minha maquina e reiniciar o servico".)
+
+- JoVee libraries (ruler, stem, theme, pedal drivers, tuner-core...) are declared with `branch = "main"`, never
+  `rev`, `tag` or a version, and every build takes the tip of their `main`: `scripts/follow-branches.sh` moves
+  Cargo.lock first (`scripts/update-libs.sh` before a build), and the commit carries
+  the moved lock. **Why:** a Jam beta shipped a ruler four commits behind its `main`; the owner: "entre as
+  dependencias do jovee nao pode ter trava por versao, sempre tem que ser a ultima versao da main".
